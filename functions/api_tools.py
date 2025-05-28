@@ -28,31 +28,53 @@ def get_exchange_rate(base_currency: str, target_currency: str) -> Optional[floa
 
 def get_crypto_price(crypto_symbol: str) -> Optional[Dict]:
     """
-    Get cryptocurrency price using CoinDesk API
-    Note: CoinDesk API only provides BTC price data
+    Get cryptocurrency price using Binance's public API
     """
     try:
-        if crypto_symbol.upper() != 'BTC':
-            return {
-                'symbol': crypto_symbol.upper(),
-                'usd': None,
-                'eur': None,
-                'error': 'Only BTC is supported through CoinDesk API'
-            }
-
-        url = "https://api.coindesk.com/v1/bpi/currentprice.json"
-        response = requests.get(url)
-        data = response.json()
+        symbol = crypto_symbol.upper()
         
-        if response.status_code == 200 and 'bpi' in data:
+        # Get USD price (using USDT as proxy)
+        url_usd = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}USDT"
+        headers = {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json'
+        }
+        
+        response_usd = requests.get(url_usd, headers=headers, timeout=10)
+        
+        if response_usd.status_code == 200:
+            data_usd = response_usd.json()
+            usd_price = float(data_usd['price'])
+            
+            # Get EUR price
+            url_eur = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}EUR"
+            response_eur = requests.get(url_eur, headers=headers, timeout=10)
+            
+            if response_eur.status_code == 200:
+                data_eur = response_eur.json()
+                eur_price = float(data_eur['price'])
+            else:
+                # If EUR pair not available, convert from USD using a fixed rate
+                eur_price = usd_price * 0.92  # Approximate EUR/USD rate
+            
             return {
-                'symbol': 'BTC',
-                'usd': data['bpi']['USD']['rate_float'],
-                'eur': data['bpi']['EUR']['rate_float']
+                'symbol': symbol,
+                'usd': usd_price,
+                'eur': eur_price
             }
-        else:
-            print(f"Error getting crypto price: {data.get('error', 'Unknown error')}")
-            return None
+        
+        print(f"Error getting crypto price: Status {response_usd.status_code}")
+        return {
+            'symbol': symbol,
+            'usd': None,
+            'eur': None,
+            'error': f'API Error: Status {response_usd.status_code}'
+        }
     except Exception as e:
         print(f"Error in get_crypto_price: {e}")
-        return None 
+        return {
+            'symbol': crypto_symbol.upper(),
+            'usd': None,
+            'eur': None,
+            'error': str(e)
+        } 

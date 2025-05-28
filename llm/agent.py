@@ -84,9 +84,13 @@ AVAILABLE_FUNCTIONS = {
                 "date": {
                     "type": "string",
                     "description": "The transaction date (YYYY-MM-DD)"
+                },
+                "currency": {
+                    "type": "string",
+                    "description": "The currency code (e.g., USD, EUR). Defaults to USD if not specified."
                 }
             },
-            "required": ["user_id", "amount", "category", "type", "date"]
+            "required": ["user_id", "amount", "category", "type"]
         }
     },
     "get_monthly_summary": {
@@ -109,6 +113,82 @@ AVAILABLE_FUNCTIONS = {
                 }
             },
             "required": ["user_id", "month"]
+        }
+    },
+    "get_spending_by_category": {
+        "name": "get_spending_by_category",
+        "description": "Get spending breakdown by category",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "The user ID"
+                },
+                "month": {
+                    "type": "integer",
+                    "description": "The month number (1-12)"
+                },
+                "year": {
+                    "type": "integer",
+                    "description": "The year (optional, defaults to current year)"
+                }
+            },
+            "required": ["user_id", "month"]
+        }
+    },
+    "import_transactions_from_csv": {
+        "name": "import_transactions_from_csv",
+        "description": "Import transactions from a CSV file",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "The user ID"
+                },
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to the CSV file"
+                }
+            },
+            "required": ["user_id", "file_path"]
+        }
+    },
+    "export_summary_to_pdf": {
+        "name": "export_summary_to_pdf",
+        "description": "Export monthly summary to PDF",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "The user ID"
+                },
+                "month": {
+                    "type": "integer",
+                    "description": "The month number (1-12)"
+                },
+                "year": {
+                    "type": "integer",
+                    "description": "The year"
+                }
+            },
+            "required": ["user_id", "month", "year"]
+        }
+    },
+    "export_data_to_csv": {
+        "name": "export_data_to_csv",
+        "description": "Export all transactions to CSV file",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "The user ID"
+                }
+            },
+            "required": ["user_id"]
         }
     }
 }
@@ -141,11 +221,65 @@ def process_user_message(user_id: str, message: str) -> str:
     Process user message and execute appropriate functions
     """
     try:
+        # Get current date information
+        current_date = datetime.now()
+        current_month = current_date.month
+        current_year = current_date.year
+        current_month_name = current_date.strftime('%B')
+
         # Create chat completion
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo-0125",
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a helpful financial assistant. Use the available functions to help users with their financial tasks."},
+                {"role": "system", "content": f"""You are a helpful financial assistant. Use the available functions to help users with their financial tasks.
+
+IMPORTANT: You have direct access to the user's data through functions - NEVER ask for user_id or other information that's already provided to you.
+
+When logging transactions:
+1. ALWAYS use the log_transaction function to actually save the transaction
+2. For foreign currencies, first calculate the USD amount but then use the original currency in the log_transaction call
+3. Use today's date ({current_date.strftime('%Y-%m-%d')}) if no date is specified
+4. Common categories: 'transport', 'food', 'utilities', 'entertainment', 'shopping', 'income', 'other'
+5. For expenses, set type='expense'. For income, set type='income'
+6. After logging, confirm the details and show the USD equivalent
+
+Example transaction logging:
+User: "Spent 50 euros on food"
+Assistant: Let me log that transaction for you:
+- Amount: 50 EUR
+- Category: food
+- Type: expense
+- Date: {current_date.strftime('%Y-%m-%d')}
+*calls log_transaction with these details*
+
+When users ask to export their transactions to CSV:
+1. Use the export_data_to_csv function immediately
+2. Tell them the path where their CSV file has been saved
+
+When users ask for their monthly summary:
+1. Call get_monthly_summary immediately with the current month ({current_month}) and year ({current_year}) if not specified
+2. Format the response like this:
+📊 Monthly Summary for {current_month_name} {current_year}
+💰 Income: $X
+💸 Expenses: $X
+💵 Net: $X
+📈 Top Income Sources:
+  - Category 1: $X
+  - Category 2: $X
+📉 Top Expenses:
+  - Category 1: $X
+  - Category 2: $X
+🔄 Currencies Used: USD, EUR, etc.
+
+After logging a transaction:
+1. Automatically show the updated monthly summary for the current month
+2. This helps users see their transaction was properly recorded
+
+Always be proactive and context-aware:
+1. Never ask for information you already have (like user_id)
+2. After any transaction is logged, show the monthly summary
+3. If a user asks about their spending, immediately show the summary
+4. Use emojis and clear formatting to make information easy to read"""},
                 {"role": "user", "content": message}
             ],
             functions=list(AVAILABLE_FUNCTIONS.values()),
@@ -165,14 +299,88 @@ def process_user_message(user_id: str, message: str) -> str:
             if "user_id" in AVAILABLE_FUNCTIONS[function_name]["parameters"]["properties"]:
                 function_args["user_id"] = user_id
             
+            # For get_monthly_summary, ensure current month/year if not specified
+            if function_name == "get_monthly_summary":
+                if "month" not in function_args:
+                    function_args["month"] = current_month
+                if "year" not in function_args:
+                    function_args["year"] = current_year
+                    
+            # For log_transaction, ensure date and currency if not specified
+            if function_name == "log_transaction":
+                if "date" not in function_args:
+                    function_args["date"] = current_date.strftime('%Y-%m-%d')
+                if "currency" not in function_args:
+                    function_args["currency"] = "USD"
+            
             # Execute the function
             function_response = execute_function(function_name, function_args)
             
+            # If this was a log_transaction, automatically get the monthly summary
+            if function_name == "log_transaction" and function_response:
+                summary_response = execute_function("get_monthly_summary", {
+                    "user_id": user_id,
+                    "month": current_month,
+                    "year": current_year
+                })
+                function_response = {
+                    "transaction_success": function_response,
+                    "monthly_summary": summary_response
+                }
+            
             # Create a new response incorporating the function result
             second_response = client.chat.completions.create(
-                model="gpt-3.5-turbo-0125",
+                model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a helpful financial assistant. Use the available functions to help users with their financial tasks."},
+                    {"role": "system", "content": f"""You are a helpful financial assistant. Use the available functions to help users with their financial tasks.
+
+IMPORTANT: You have direct access to the user's data through functions - NEVER ask for user_id or other information that's already provided to you.
+
+When logging transactions:
+1. ALWAYS use the log_transaction function to actually save the transaction
+2. For foreign currencies, first calculate the USD amount but then use the original currency in the log_transaction call
+3. Use today's date ({current_date.strftime('%Y-%m-%d')}) if no date is specified
+4. Common categories: 'transport', 'food', 'utilities', 'entertainment', 'shopping', 'income', 'other'
+5. For expenses, set type='expense'. For income, set type='income'
+6. After logging, confirm the details and show the USD equivalent
+
+Example transaction logging:
+User: "Spent 50 euros on food"
+Assistant: Let me log that transaction for you:
+- Amount: 50 EUR
+- Category: food
+- Type: expense
+- Date: {current_date.strftime('%Y-%m-%d')}
+*calls log_transaction with these details*
+
+When users ask to export their transactions to CSV:
+1. Use the export_data_to_csv function immediately
+2. Tell them the path where their CSV file has been saved
+
+When users ask for their monthly summary:
+1. Call get_monthly_summary immediately with the current month ({current_month}) and year ({current_year}) if not specified
+2. Format the response like this:
+📊 Monthly Summary for {current_month_name} {current_year}
+💰 Income: $X
+💸 Expenses: $X
+💵 Net: $X
+📈 Top Income Sources:
+  - Category 1: $X
+  - Category 2: $X
+📉 Top Expenses:
+  - Category 1: $X
+  - Category 2: $X
+🔄 Currencies Used: USD, EUR, etc.
+
+After logging a transaction:
+1. Automatically show the updated monthly summary for the current month
+2. This helps users see their transaction was properly recorded
+
+Always be proactive and context-aware:
+1. Never ask for information you already have (like user_id)
+2. After any transaction is logged, show the monthly summary
+3. If a user asks about their spending, immediately show the summary
+4. Use emojis and clear formatting to make information easy to read"""},
                     {"role": "user", "content": message},
                     {"role": "assistant", "content": None, "function_call": response_message.function_call},
                     {"role": "function", "name": function_name, "content": json.dumps(function_response)}

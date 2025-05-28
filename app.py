@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 from functions.api_tools import get_exchange_rate, get_crypto_price
@@ -12,7 +12,21 @@ import uuid
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))  # For session management
+
+# Set a consistent secret key from environment or generate one
+if os.path.exists('.flask_secret_key'):
+    with open('.flask_secret_key', 'rb') as f:
+        app.secret_key = f.read()
+else:
+    app.secret_key = os.urandom(24)
+    with open('.flask_secret_key', 'wb') as f:
+        f.write(app.secret_key)
+
+# Configure session
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)  # Sessions last for 31 days
 
 # Ensure the uploads and exports directories exist
 os.makedirs('uploads', exist_ok=True)
@@ -20,6 +34,7 @@ os.makedirs('exports', exist_ok=True)
 
 def get_or_create_user_id():
     if 'user_id' not in session:
+        session.permanent = True  # Make the session permanent
         session['user_id'] = f"user_{str(uuid.uuid4())[:8]}"
     return session['user_id']
 
@@ -47,7 +62,8 @@ def transaction():
             amount=float(data['amount']),
             category=data['category'],
             type=data['type'],
-            date=datetime.strptime(data['date'], '%Y-%m-%d').date()
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            currency=data.get('currency', 'USD')  # Default to USD if not specified
         )
         return jsonify({'success': success})
     return render_template('log_transaction.html')

@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}AI Assistant - Financial Assistant{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    
+    .message {
+        margin-bottom: 1rem;
+        max-width: 80%;
+    }
+    
+    .message.user {
+        margin-left: auto;
+    }
+    
+    .message.assistant {
+        margin-right: auto;
+    }
+    
+    .message .content {
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        position: relative;
+    }
+    
+    .message.user .content {
+        background: #0d6efd;
+        color: white;
+        border-top-right-radius: 0;
+    }
+    
+    .message.assistant .content {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-top-left-radius: 0;
+    }
+    
+    .message .timestamp {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    
+    .chat-input {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: white;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .suggestions {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>AI Financial Assistant</h1>
+            <p class="text-muted">Chat with your personal financial advisor</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card chat-container">
+                <!-- Chat Messages -->
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Welcome Message -->
+                    <div class="message assistant">
+                        <div class="content">
+                            <p>👋 Hello! I'm your AI financial assistant. I can help you with:</p>
+                            <ul>
+                                <li>Getting currency exchange rates</li>
+                                <li>Checking cryptocurrency prices</li>
+                                <li>Managing your transactions</li>
+                                <li>Generating financial reports</li>
+                                <li>Analyzing your spending patterns</li>
+                            </ul>
+                            <p>How can I assist you today?</p>
+                        </div>
+                        <div class="timestamp">Now</div>
+                    </div>
+                </div>
+
+                <!-- Quick Suggestions -->
+                <div class="chat-input">
+                    <div class="suggestions">
+                        <button class="btn btn-outline-primary btn-sm suggestion">
+                            Show me BTC price
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm suggestion">
+                            Convert 100 USD to EUR
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm suggestion">
+                            Show my monthly summary
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm suggestion">
+                            Export transactions to CSV
+                        </button>
+                    </div>
+
+                    <!-- Input Form -->
+                    <form id="chatForm" class="input-group">
+                        <input type="text" class="form-control" id="userInput" 
+                               placeholder="Type your message here..." required>
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    
+    // Function to add a message to the chat
+    function addMessage(content, isUser = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.innerHTML = content;
+        
+        const timestampDiv = document.createElement('div');
+        timestampDiv.className = 'timestamp';
+        timestampDiv.textContent = new Date().toLocaleTimeString();
+        
+        messageDiv.appendChild(contentDiv);
+        messageDiv.appendChild(timestampDiv);
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Handle form submission
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const message = userInput.value.trim();
+        if (!message) return;
+        
+        // Add user message
+        addMessage(message, true);
+        
+        // Clear input
+        userInput.value = '';
+        
+        // Show typing indicator
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message assistant';
+        typingDiv.innerHTML = `
+            <div class="content">
+                <span class="spinner-grow spinner-grow-sm"></span>
+                <span class="spinner-grow spinner-grow-sm"></span>
+                <span class="spinner-grow spinner-grow-sm"></span>
+            </div>
+        `;
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Send message to server
+        fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Remove typing indicator
+            chatMessages.removeChild(typingDiv);
+            
+            // Add assistant response
+            addMessage(data.response);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            chatMessages.removeChild(typingDiv);
+            addMessage('Sorry, I encountered an error. Please try again.');
+        });
+    });
+    
+    // Handle quick suggestions
+    document.querySelectorAll('.suggestion').forEach(button => {
+        button.addEventListener('click', function() {
+            userInput.value = this.textContent.trim();
+            chatForm.dispatchEvent(new Event('submit'));
+        });
+    });
+});
+</script>
+{% endblock %} 

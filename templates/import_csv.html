@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Import CSV - Financial Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Import Transactions</h1>
+            <p class="text-muted">Import your transactions from a CSV file</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form id="importForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Choose CSV File</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Import Transactions</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">CSV Format Instructions</h5>
+                    <p>Your CSV file should have the following columns:</p>
+                    <ul class="list-unstyled">
+                        <li><code>date</code> - YYYY-MM-DD format</li>
+                        <li><code>amount</code> - Numeric value</li>
+                        <li><code>category</code> - Transaction category</li>
+                        <li><code>type</code> - "income" or "expense"</li>
+                    </ul>
+                    <h6 class="mt-3">Example:</h6>
+                    <pre class="bg-light p-2 rounded"><code>date,amount,category,type
+2024-02-01,1000.00,Salary,income
+2024-02-02,50.00,Food,expense
+2024-02-03,25.50,Transportation,expense</code></pre>
+                    <a href="#" class="btn btn-outline-primary btn-sm mt-2" id="downloadTemplate">
+                        <i class="fas fa-download"></i> Download Template
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress and Results -->
+    <div class="row mt-4" id="importResults" style="display: none;">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Import Results</h5>
+                    <div class="alert" id="importAlert" role="alert"></div>
+                    <div id="importDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle form submission
+    document.getElementById('importForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const resultsDiv = document.getElementById('importResults');
+        const alertDiv = document.getElementById('importAlert');
+        const detailsDiv = document.getElementById('importDetails');
+        
+        // Show loading state
+        resultsDiv.style.display = 'block';
+        alertDiv.className = 'alert alert-info';
+        alertDiv.textContent = 'Importing transactions...';
+        detailsDiv.innerHTML = '';
+        
+        fetch('/import_csv', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alertDiv.className = 'alert alert-success';
+                alertDiv.textContent = 'Transactions imported successfully!';
+                this.reset();
+            } else {
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.textContent = data.error || 'Error importing transactions. Please check your file format and try again.';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alertDiv.className = 'alert alert-danger';
+            alertDiv.textContent = 'Error importing transactions. Please try again.';
+        });
+    });
+
+    // Handle template download
+    document.getElementById('downloadTemplate').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Create CSV content
+        const csvContent = 'date,amount,category,type\n2024-02-01,1000.00,Salary,income\n2024-02-02,50.00,Food,expense';
+        
+        // Create download link
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'transactions_template.csv';
+        
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    });
+});
+</script>
+{% endblock %} 

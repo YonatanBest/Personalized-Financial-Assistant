@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Export Data - Financial Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Export Data</h1>
+            <p class="text-muted">Export your financial data in various formats</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Monthly Summary PDF -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-file-pdf text-danger"></i>
+                        Export Monthly Summary (PDF)
+                    </h5>
+                    <p class="card-text">Generate a detailed PDF report of your monthly financial summary.</p>
+                    
+                    <form id="pdfForm" class="mt-3">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label for="month" class="form-label">Month</label>
+                                <select class="form-select" id="month" name="month" required>
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="year" class="form-label">Year</label>
+                                <input type="number" class="form-control" id="year" name="year" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-danger mt-3">
+                            <i class="fas fa-download"></i> Download PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Data CSV -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-file-csv text-success"></i>
+                        Export All Transactions (CSV)
+                    </h5>
+                    <p class="card-text">Download all your transaction data in CSV format for backup or analysis.</p>
+                    
+                    <div class="mt-3">
+                        <p class="mb-3">The CSV file will include:</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success"></i> All transactions</li>
+                            <li><i class="fas fa-check text-success"></i> Complete transaction details</li>
+                            <li><i class="fas fa-check text-success"></i> Sorted by date</li>
+                        </ul>
+                        
+                        <button id="csvExport" class="btn btn-success mt-3">
+                            <i class="fas fa-download"></i> Download CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default year to current year
+    document.getElementById('year').value = new Date().getFullYear();
+    
+    // Set default month to current month
+    document.getElementById('month').value = new Date().getMonth() + 1;
+    
+    // Handle PDF export
+    document.getElementById('pdfForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const month = document.getElementById('month').value;
+        const year = document.getElementById('year').value;
+        
+        window.location.href = `/api/export_pdf?month=${month}&year=${year}`;
+    });
+    
+    // Handle CSV export
+    document.getElementById('csvExport').addEventListener('click', function() {
+        window.location.href = '/api/export_csv';
+    });
+});
+</script>
+{% endblock %} 

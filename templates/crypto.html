@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Bitcoin Price - Financial Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Bitcoin Price</h1>
+            <p class="text-muted">Get real-time Bitcoin price from CoinDesk</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Bitcoin Price Card -->
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="text-center mb-4">Current Bitcoin Price</h3>
+                    <div class="row text-center">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">USD</h6>
+                                    <h4 class="card-title mb-0" id="usdPrice">$0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-2 text-muted">EUR</h6>
+                                    <h4 class="card-title mb-0" id="eurPrice">€0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button id="refreshPrice" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i> Refresh Price
+                        </button>
+                    </div>
+
+                    <p class="text-center text-muted mt-3 mb-0">
+                        <small>Last updated: <span id="timestamp"></span></small>
+                        <br>
+                        <small>Powered by <a href="https://www.coindesk.com/price/bitcoin" target="_blank">CoinDesk</a></small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshButton = document.getElementById('refreshPrice');
+    
+    // Function to format currency
+    function formatCurrency(amount, currency) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency
+        }).format(amount);
+    }
+    
+    // Function to update price display
+    function updatePriceDisplay(data) {
+        if (data && !data.error) {
+            document.getElementById('usdPrice').textContent = formatCurrency(data.usd, 'USD');
+            document.getElementById('eurPrice').textContent = formatCurrency(data.eur, 'EUR');
+            document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        } else {
+            alert('Error getting Bitcoin price. Please try again.');
+        }
+    }
+    
+    // Function to fetch price
+    function fetchPrice() {
+        refreshButton.disabled = true;
+        refreshButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
+        
+        fetch('/api/crypto_price?symbol=BTC')
+            .then(response => response.json())
+            .then(data => updatePriceDisplay(data))
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error getting Bitcoin price. Please try again.');
+            })
+            .finally(() => {
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Price';
+            });
+    }
+    
+    // Handle refresh button click
+    refreshButton.addEventListener('click', fetchPrice);
+    
+    // Initial load
+    fetchPrice();
+    
+    // Auto-refresh every 60 seconds
+    setInterval(fetchPrice, 60000);
+});
+</script>
+{% endblock %} 

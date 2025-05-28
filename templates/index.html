@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Financial Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">Welcome to Your Financial Assistant</h1>
+            <p class="lead">Manage your finances with ease using our AI-powered tools.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Dashboard Card -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-line text-primary"></i> Financial Dashboard</h5>
+                    <p class="card-text">View your financial overview, including income, expenses, and category breakdowns.</p>
+                    <a href="/dashboard" class="btn btn-primary">View Dashboard</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Card -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-plus-circle text-success"></i> Log Transaction</h5>
+                    <p class="card-text">Record your income and expenses with detailed categorization.</p>
+                    <a href="/log_transaction" class="btn btn-success">Log Transaction</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import/Export Card -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-file-import text-info"></i> Import/Export</h5>
+                    <p class="card-text">Import transactions from CSV or export your data in various formats.</p>
+                    <div class="btn-group">
+                        <a href="/import_csv" class="btn btn-info">Import CSV</a>
+                        <a href="/export" class="btn btn-outline-info">Export Data</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exchange Rates Card -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-exchange-alt text-warning"></i> Exchange Rates</h5>
+                    <p class="card-text">Get real-time currency exchange rates for major world currencies.</p>
+                    <a href="/exchange_rates" class="btn btn-warning">Check Rates</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crypto Card -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fab fa-bitcoin text-danger"></i> Crypto Prices</h5>
+                    <p class="card-text">Track cryptocurrency prices and market trends in real-time.</p>
+                    <a href="/crypto" class="btn btn-danger">View Crypto</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant Card -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-robot text-secondary"></i> AI Assistant</h5>
+                    <p class="card-text">Get personalized financial advice and insights from our AI assistant.</p>
+                    <a href="/chat" class="btn btn-secondary">Chat Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

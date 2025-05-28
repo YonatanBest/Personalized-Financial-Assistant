@@ -1,3 +1,14 @@
+# Python
+__pycache__/
+venv/
+
+# Environment variables
 .env
-data/
-reports/
+
+# Database
+database/*.db
+*.sqlite3
+
+# Generated files
+exports/
+uploads/

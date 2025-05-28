@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Exchange Rates - Financial Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Currency Exchange Rates</h1>
+            <p class="text-muted">Get real-time currency conversion rates</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <form id="exchangeForm">
+                        <div class="row g-3">
+                            <!-- Amount Input -->
+                            <div class="col-12">
+                                <label for="amount" class="form-label">Amount</label>
+                                <input type="number" class="form-control" id="amount" value="1" min="0.01" step="0.01" required>
+                            </div>
+
+                            <!-- Base Currency -->
+                            <div class="col-md-6">
+                                <label for="baseCurrency" class="form-label">From Currency</label>
+                                <select class="form-select" id="baseCurrency" required>
+                                    <option value="USD" selected>US Dollar (USD)</option>
+                                    <option value="EUR">Euro (EUR)</option>
+                                    <option value="GBP">British Pound (GBP)</option>
+                                    <option value="JPY">Japanese Yen (JPY)</option>
+                                    <option value="AUD">Australian Dollar (AUD)</option>
+                                    <option value="CAD">Canadian Dollar (CAD)</option>
+                                    <option value="CHF">Swiss Franc (CHF)</option>
+                                    <option value="CNY">Chinese Yuan (CNY)</option>
+                                    <option value="INR">Indian Rupee (INR)</option>
+                                    <option value="NZD">New Zealand Dollar (NZD)</option>
+                                </select>
+                            </div>
+
+                            <!-- Target Currency -->
+                            <div class="col-md-6">
+                                <label for="targetCurrency" class="form-label">To Currency</label>
+                                <select class="form-select" id="targetCurrency" required>
+                                    <option value="EUR" selected>Euro (EUR)</option>
+                                    <option value="USD">US Dollar (USD)</option>
+                                    <option value="GBP">British Pound (GBP)</option>
+                                    <option value="JPY">Japanese Yen (JPY)</option>
+                                    <option value="AUD">Australian Dollar (AUD)</option>
+                                    <option value="CAD">Canadian Dollar (CAD)</option>
+                                    <option value="CHF">Swiss Franc (CHF)</option>
+                                    <option value="CNY">Chinese Yuan (CNY)</option>
+                                    <option value="INR">Indian Rupee (INR)</option>
+                                    <option value="NZD">New Zealand Dollar (NZD)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-4">Convert</button>
+                    </form>
+
+                    <!-- Result Card -->
+                    <div id="resultCard" class="card mt-4" style="display: none;">
+                        <div class="card-body text-center">
+                            <h3 class="card-title mb-4">Conversion Result</h3>
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h4 id="fromAmount">1.00 USD</h4>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-equals"></i>
+                                </div>
+                                <div class="col">
+                                    <h4 id="toAmount">0.85 EUR</h4>
+                                </div>
+                            </div>
+                            <p class="text-muted mt-3 mb-0">
+                                Exchange rate: <span id="rate">0.85</span>
+                                <br>
+                                <small>Last updated: <span id="timestamp"></span></small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('exchangeForm');
+    const resultCard = document.getElementById('resultCard');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const amount = parseFloat(document.getElementById('amount').value);
+        const baseCurrency = document.getElementById('baseCurrency').value;
+        const targetCurrency = document.getElementById('targetCurrency').value;
+        
+        // Show loading state
+        form.querySelector('button').disabled = true;
+        form.querySelector('button').innerHTML = '<span class="spinner-border spinner-border-sm"></span> Converting...';
+        
+        fetch(`/api/exchange_rate?base=${baseCurrency}&target=${targetCurrency}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.rate) {
+                    const convertedAmount = amount * data.rate;
+                    
+                    // Update result card
+                    document.getElementById('fromAmount').textContent = 
+                        `${amount.toFixed(2)} ${baseCurrency}`;
+                    document.getElementById('toAmount').textContent = 
+                        `${convertedAmount.toFixed(2)} ${targetCurrency}`;
+                    document.getElementById('rate').textContent = 
+                        `1 ${baseCurrency} = ${data.rate.toFixed(4)} ${targetCurrency}`;
+                    document.getElementById('timestamp').textContent = 
+                        new Date().toLocaleString();
+                    
+                    resultCard.style.display = 'block';
+                } else {
+                    alert('Error getting exchange rate. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error getting exchange rate. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                form.querySelector('button').disabled = false;
+                form.querySelector('button').textContent = 'Convert';
+            });
+    });
+    
+    // Prevent selecting same currency
+    document.getElementById('baseCurrency').addEventListener('change', function() {
+        const targetSelect = document.getElementById('targetCurrency');
+        Array.from(targetSelect.options).forEach(option => {
+            option.disabled = option.value === this.value;
+        });
+    });
+    
+    document.getElementById('targetCurrency').addEventListener('change', function() {
+        const baseSelect = document.getElementById('baseCurrency');
+        Array.from(baseSelect.options).forEach(option => {
+            option.disabled = option.value === this.value;
+        });
+    });
+});
+</script>
+{% endblock %} 

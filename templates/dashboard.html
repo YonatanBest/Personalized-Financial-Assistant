@@ -1,1 +1,150 @@
- 
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Financial Assistant{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Financial Dashboard</h1>
+            <p class="text-muted">Your financial overview for {{ summary.period.month_name }} {{ summary.period.year }}</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <!-- Income Card -->
+        <div class="col-md-4">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Income</h5>
+                    <h2 class="card-text">${{ "%.2f"|format(summary.total_income) }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Expenses Card -->
+        <div class="col-md-4">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Expenses</h5>
+                    <h2 class="card-text">${{ "%.2f"|format(summary.total_expenses) }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Net Card -->
+        <div class="col-md-4">
+            <div class="card {% if summary.net >= 0 %}bg-primary{% else %}bg-warning{% endif %} text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Net Balance</h5>
+                    <h2 class="card-text">${{ "%.2f"|format(summary.net) }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Income Categories -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-pie text-success"></i>
+                        Income by Category
+                    </h5>
+                    {% if summary.income_by_category %}
+                        <div class="list-group mt-3">
+                            {% for category, amount in summary.income_by_category.items() %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ category }}
+                                    <span class="badge bg-success rounded-pill">${{ "%.2f"|format(amount) }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mt-3">No income recorded for this period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense Categories -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-pie text-danger"></i>
+                        Expenses by Category
+                    </h5>
+                    {% if summary.expenses_by_category %}
+                        <div class="list-group mt-3">
+                            {% for category, amount in summary.expenses_by_category.items() %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ category }}
+                                    <span class="badge bg-danger rounded-pill">${{ "%.2f"|format(amount) }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted mt-3">No expenses recorded for this period.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Currency Usage -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-coins text-warning"></i>
+                        Currencies Used
+                    </h5>
+                    <div class="mt-3">
+                        {% if summary.currencies_used %}
+                            {% for currency in summary.currencies_used %}
+                                <span class="badge bg-info me-2">{{ currency }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No transactions recorded for this period.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Quick Actions</h5>
+                    <div class="btn-group">
+                        <a href="/log_transaction" class="btn btn-primary">
+                            <i class="fas fa-plus-circle"></i> New Transaction
+                        </a>
+                        <a href="/export" class="btn btn-success">
+                            <i class="fas fa-file-export"></i> Export Data
+                        </a>
+                        <a href="/import_csv" class="btn btn-info">
+                            <i class="fas fa-file-import"></i> Import CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add any dashboard-specific JavaScript here
+});
+</script>
+{% endblock %} 

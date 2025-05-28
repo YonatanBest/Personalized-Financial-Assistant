@@ -8,27 +8,40 @@ from .db_tools import bulk_insert_transactions, get_monthly_summary, get_all_use
 def import_transactions_from_csv(user_id: str, file_path: str) -> bool:
     """
     Import transactions from a CSV file.
-    Expected CSV format: date,amount,category,type
+    Supports both old format (date,amount,category,type) and new format (date,amount_usd,original_amount,original_currency,category,type)
     """
     try:
         df = pd.read_csv(file_path)
-        required_columns = ['date', 'amount', 'category', 'type']
         
-        # Validate CSV structure
-        if not all(col in df.columns for col in required_columns):
+        # Check which format we're dealing with
+        new_format = all(col in df.columns for col in ['date', 'amount_usd', 'original_amount', 'original_currency', 'category', 'type'])
+        old_format = all(col in df.columns for col in ['date', 'amount', 'category', 'type'])
+        
+        if not (new_format or old_format):
             print("CSV file missing required columns")
             return False
         
         # Convert DataFrame to list of dictionaries
         transactions = []
         for _, row in df.iterrows():
-            transaction = {
-                'user_id': user_id,
-                'date': datetime.strptime(row['date'], '%Y-%m-%d').date(),
-                'amount': float(row['amount']),
-                'category': row['category'],
-                'type': row['type'].lower()
-            }
+            if new_format:
+                transaction = {
+                    'user_id': user_id,
+                    'date': datetime.strptime(row['date'], '%Y-%m-%d').date(),
+                    'amount': float(row['original_amount']),
+                    'currency': row['original_currency'],
+                    'category': row['category'],
+                    'type': row['type'].lower()
+                }
+            else:
+                transaction = {
+                    'user_id': user_id,
+                    'date': datetime.strptime(row['date'], '%Y-%m-%d').date(),
+                    'amount': float(row['amount']),
+                    'currency': 'USD',  # Default to USD for old format
+                    'category': row['category'],
+                    'type': row['type'].lower()
+                }
             transactions.append(transaction)
         
         # Bulk insert into database
@@ -89,6 +102,7 @@ def export_summary_to_pdf(user_id: str, month: int, year: int = None) -> str:
         # Title
         pdf.set_font('Arial', 'B', 16)
         pdf.cell(0, 10, f'Financial Summary - {datetime(year, month, 1).strftime("%B %Y")}', ln=True, align='C')
+        pdf.ln(5)
         
         # Overview
         pdf.set_font('Arial', 'B', 14)
@@ -96,15 +110,45 @@ def export_summary_to_pdf(user_id: str, month: int, year: int = None) -> str:
         pdf.set_font('Arial', '', 12)
         pdf.cell(0, 10, f'Total Income: ${summary["total_income"]:.2f}', ln=True)
         pdf.cell(0, 10, f'Total Expenses: ${summary["total_expenses"]:.2f}', ln=True)
-        pdf.cell(0, 10, f'Net: ${summary["total_income"] - summary["total_expenses"]:.2f}', ln=True)
+        pdf.cell(0, 10, f'Net Balance: ${summary["net"]:.2f}', ln=True)
+        pdf.ln(5)
         
-        # Category Breakdown
+        # Income Categories
         pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, 'Category Breakdown', ln=True)
+        pdf.cell(0, 10, 'Income by Category', ln=True)
         pdf.set_font('Arial', '', 12)
+        if summary['income_by_category']:
+            for category, amount in summary['income_by_category'].items():
+                pdf.cell(0, 8, f'{category}: ${amount:.2f}', ln=True)
+        else:
+            pdf.cell(0, 8, 'No income recorded for this period', ln=True)
+        pdf.ln(5)
         
-        for category, amount in summary['by_category'].items():
-            pdf.cell(0, 10, f'{category}: ${amount:.2f}', ln=True)
+        # Expense Categories
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, 'Expenses by Category', ln=True)
+        pdf.set_font('Arial', '', 12)
+        if summary['expenses_by_category']:
+            for category, amount in summary['expenses_by_category'].items():
+                pdf.cell(0, 8, f'{category}: ${amount:.2f}', ln=True)
+        else:
+            pdf.cell(0, 8, 'No expenses recorded for this period', ln=True)
+        pdf.ln(5)
+        
+        # Currencies Used
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, 'Currencies Used', ln=True)
+        pdf.set_font('Arial', '', 12)
+        if summary['currencies_used']:
+            currencies_text = ', '.join(summary['currencies_used'])
+            pdf.cell(0, 8, currencies_text, ln=True)
+        else:
+            pdf.cell(0, 8, 'No transactions recorded', ln=True)
+        
+        # Footer
+        pdf.ln(10)
+        pdf.set_font('Arial', 'I', 10)
+        pdf.cell(0, 10, f'Generated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}', ln=True, align='C')
         
         # Create exports directory if it doesn't exist
         os.makedirs('exports', exist_ok=True)

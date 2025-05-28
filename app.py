@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file, session
+from flask import Flask, render_template, request, jsonify, send_file, session, Response
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
@@ -144,6 +144,32 @@ def process_chat():
     message = request.json.get('message', '')
     response = process_user_message(user_id, message)
     return jsonify({'response': response})
+
+@app.route('/api/csv_template')
+def get_csv_template():
+    """Provide a downloadable CSV template with examples in different formats"""
+    # Basic format template
+    basic_template = """date,amount,category,type
+2024-05-01,1000.00,Salary,income
+2024-05-02,50.00,Food,expense
+2024-05-02,75.50,Transportation,expense
+2024-05-03,25.00,Entertainment,expense
+2024-05-03,500.00,Freelancing,income
+# For foreign currencies, just include the amount in that currency:
+2024-05-04,50.00,Shopping,expense
+2024-05-04,30.00,Books,expense
+
+# Extended format example (optional, for advanced users):
+# date,amount_usd,original_amount,original_currency,category,type
+# 2024-05-01,1000.00,1000.00,USD,Salary,income
+# 2024-05-02,54.25,50.00,EUR,Food,expense
+# 2024-05-03,30.25,25.50,GBP,Transportation,expense"""
+
+    return Response(
+        basic_template,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=transactions_template.csv'}
+    )
 
 if __name__ == '__main__':
     app.run(debug=True) 

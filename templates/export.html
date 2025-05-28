@@ -50,6 +50,37 @@
                             <i class="fas fa-download"></i> Download PDF
                         </button>
                     </form>
+
+                    <!-- PDF Preview -->
+                    <div class="mt-4">
+                        <h6 class="fw-bold">PDF Report Contents:</h6>
+                        <div class="bg-light p-3 rounded">
+                            <p class="mb-2"><strong>1. Overview</strong></p>
+                            <ul class="small">
+                                <li>Total Income</li>
+                                <li>Total Expenses</li>
+                                <li>Net Balance</li>
+                            </ul>
+
+                            <p class="mb-2"><strong>2. Income by Category</strong></p>
+                            <ul class="small">
+                                <li>Breakdown of income sources</li>
+                                <li>Amount per category</li>
+                            </ul>
+
+                            <p class="mb-2"><strong>3. Expenses by Category</strong></p>
+                            <ul class="small">
+                                <li>Detailed expense categories</li>
+                                <li>Amount per category</li>
+                            </ul>
+
+                            <p class="mb-2"><strong>4. Currency Information</strong></p>
+                            <ul class="small">
+                                <li>List of currencies used</li>
+                                <li>All amounts in USD equivalent</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -75,6 +106,25 @@
                         <button id="csvExport" class="btn btn-success mt-3">
                             <i class="fas fa-download"></i> Download CSV
                         </button>
+                    </div>
+
+                    <!-- CSV Preview -->
+                    <div class="mt-4">
+                        <h6 class="fw-bold">CSV File Contents:</h6>
+                        <div class="bg-light p-3 rounded">
+                            <p class="mb-2">Your CSV file will include:</p>
+                            <ul class="small mb-3">
+                                <li>Transaction Date</li>
+                                <li>Amount in USD</li>
+                                <li>Original Amount</li>
+                                <li>Original Currency</li>
+                                <li>Category</li>
+                                <li>Transaction Type</li>
+                            </ul>
+                            <p class="small text-muted mb-0">
+                                Compatible with Excel, Google Sheets, and other spreadsheet software.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

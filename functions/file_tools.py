@@ -50,8 +50,8 @@ def export_data_to_csv(user_id: str) -> str:
         for trans in transactions:
             data.append({
                 'date': trans.date,
-                'amount_usd': trans.amount_usd,
-                'original_amount': trans.original_amount,
+                'amount_usd': round(trans.amount_usd, 2),  # Round USD amount for cleaner display
+                'original_amount': round(trans.original_amount, 2),  # Round original amount
                 'original_currency': trans.original_currency,
                 'category': trans.category,
                 'type': trans.type

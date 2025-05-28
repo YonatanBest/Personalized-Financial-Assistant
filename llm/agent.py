@@ -2,7 +2,7 @@ from openai import OpenAI
 from typing import Dict, Any, Optional
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from functions.api_tools import get_exchange_rate, get_crypto_price
 from functions.db_tools import (
     log_transaction,
@@ -226,6 +226,8 @@ def process_user_message(user_id: str, message: str) -> str:
         current_month = current_date.month
         current_year = current_date.year
         current_month_name = current_date.strftime('%B')
+        yesterday = (current_date - timedelta(days=1)).strftime('%Y-%m-%d')
+        last_saturday = (current_date - timedelta(days=(current_date.weekday() + 2) % 7)).strftime('%Y-%m-%d')
 
         # Create chat completion
         response = client.chat.completions.create(
@@ -233,24 +235,64 @@ def process_user_message(user_id: str, message: str) -> str:
             messages=[
                 {"role": "system", "content": f"""You are a helpful financial assistant. Use the available functions to help users with their financial tasks.
 
+IMPORTANT RULES FOR CURRENCIES:
+1. When logging transactions in foreign currencies:
+   - ALWAYS pass the original amount and currency to log_transaction
+   - Use the currency parameter to specify the original currency (e.g., currency='EUR' for euros)
+   - The function will handle USD conversion internally
+   - Example: For "75 euros", use amount=75, currency='EUR'
+2. Common currency codes:
+   - USD: US Dollar
+   - EUR: Euro
+   - GBP: British Pound
+   - JPY: Japanese Yen
+   - INR: Indian Rupee
+   - ETB: Ethiopian Birr
+3. Never convert amounts yourself - let the system handle all conversions
+
+IMPORTANT RULES FOR DATES:
+1. ALWAYS use 'YYYY-MM-DD' format for dates
+2. For relative dates:
+   - 'today' = '{current_date.strftime('%Y-%m-%d')}'
+   - 'yesterday' = '{yesterday}'
+   - 'last Saturday' = '{last_saturday}'
+3. Never pass datetime objects, only strings in 'YYYY-MM-DD' format
+4. For dates like 'May 15', use '{current_year}-05-15'
+
 IMPORTANT: You have direct access to the user's data through functions - NEVER ask for user_id or other information that's already provided to you.
 
 When logging transactions:
 1. ALWAYS use the log_transaction function to actually save the transaction
-2. For foreign currencies, first calculate the USD amount but then use the original currency in the log_transaction call
+2. For foreign currencies:
+   - Pass the original amount and currency to log_transaction
+   - Use the currency parameter in log_transaction (e.g., currency='EUR' for euros)
+   - The function will handle the conversion internally
 3. Use today's date ({current_date.strftime('%Y-%m-%d')}) if no date is specified
 4. Common categories: 'transport', 'food', 'utilities', 'entertainment', 'shopping', 'income', 'other'
 5. For expenses, set type='expense'. For income, set type='income'
-6. After logging, confirm the details and show the USD equivalent
+6. After logging, confirm the details including both original amount and USD equivalent
+
+For multiple transactions in one message:
+1. Process each transaction separately with its own log_transaction call
+2. Don't just describe what you'll do - actually call log_transaction for each one
+3. After logging all transactions, show the monthly summary once at the end
+4. Example response format:
+   ✅ Logged: 50 EUR on food (≈ $54.25 USD)
+   ✅ Logged: 30 EUR on transport (≈ $32.55 USD)
+   
+   Here's your updated monthly summary...
 
 Example transaction logging:
-User: "Spent 50 euros on food"
-Assistant: Let me log that transaction for you:
-- Amount: 50 EUR
-- Category: food
-- Type: expense
-- Date: {current_date.strftime('%Y-%m-%d')}
-*calls log_transaction with these details*
+User: "Spent 50 euros on food yesterday"
+Assistant actions:
+1. Call log_transaction with:
+   - amount: 50
+   - currency: 'EUR'
+   - category: 'food'
+   - type: 'expense'
+   - date: '{yesterday}'
+2. Show confirmation with both EUR and USD amounts
+3. Show monthly summary
 
 When users ask to export their transactions to CSV:
 1. Use the export_data_to_csv function immediately
@@ -312,6 +354,9 @@ Always be proactive and context-aware:
                     function_args["date"] = current_date.strftime('%Y-%m-%d')
                 if "currency" not in function_args:
                     function_args["currency"] = "USD"
+                # Ensure date is a string
+                if isinstance(function_args["date"], datetime):
+                    function_args["date"] = function_args["date"].strftime('%Y-%m-%d')
             
             # Execute the function
             function_response = execute_function(function_name, function_args)
@@ -325,7 +370,11 @@ Always be proactive and context-aware:
                 })
                 function_response = {
                     "transaction_success": function_response,
-                    "monthly_summary": summary_response
+                    "monthly_summary": summary_response,
+                    "original_transaction": {
+                        **function_args,
+                        "date": function_args["date"] if isinstance(function_args["date"], str) else function_args["date"].strftime('%Y-%m-%d')
+                    }
                 }
             
             # Create a new response incorporating the function result
@@ -334,24 +383,64 @@ Always be proactive and context-aware:
                 messages=[
                     {"role": "system", "content": f"""You are a helpful financial assistant. Use the available functions to help users with their financial tasks.
 
+IMPORTANT RULES FOR CURRENCIES:
+1. When logging transactions in foreign currencies:
+   - ALWAYS pass the original amount and currency to log_transaction
+   - Use the currency parameter to specify the original currency (e.g., currency='EUR' for euros)
+   - The function will handle USD conversion internally
+   - Example: For "75 euros", use amount=75, currency='EUR'
+2. Common currency codes:
+   - USD: US Dollar
+   - EUR: Euro
+   - GBP: British Pound
+   - JPY: Japanese Yen
+   - INR: Indian Rupee
+   - ETB: Ethiopian Birr
+3. Never convert amounts yourself - let the system handle all conversions
+
+IMPORTANT RULES FOR DATES:
+1. ALWAYS use 'YYYY-MM-DD' format for dates
+2. For relative dates:
+   - 'today' = '{current_date.strftime('%Y-%m-%d')}'
+   - 'yesterday' = '{yesterday}'
+   - 'last Saturday' = '{last_saturday}'
+3. Never pass datetime objects, only strings in 'YYYY-MM-DD' format
+4. For dates like 'May 15', use '{current_year}-05-15'
+
 IMPORTANT: You have direct access to the user's data through functions - NEVER ask for user_id or other information that's already provided to you.
 
 When logging transactions:
 1. ALWAYS use the log_transaction function to actually save the transaction
-2. For foreign currencies, first calculate the USD amount but then use the original currency in the log_transaction call
+2. For foreign currencies:
+   - Pass the original amount and currency to log_transaction
+   - Use the currency parameter in log_transaction (e.g., currency='EUR' for euros)
+   - The function will handle the conversion internally
 3. Use today's date ({current_date.strftime('%Y-%m-%d')}) if no date is specified
 4. Common categories: 'transport', 'food', 'utilities', 'entertainment', 'shopping', 'income', 'other'
 5. For expenses, set type='expense'. For income, set type='income'
-6. After logging, confirm the details and show the USD equivalent
+6. After logging, confirm the details including both original amount and USD equivalent
+
+For multiple transactions in one message:
+1. Process each transaction separately with its own log_transaction call
+2. Don't just describe what you'll do - actually call log_transaction for each one
+3. After logging all transactions, show the monthly summary once at the end
+4. Example response format:
+   ✅ Logged: 50 EUR on food (≈ $54.25 USD)
+   ✅ Logged: 30 EUR on transport (≈ $32.55 USD)
+   
+   Here's your updated monthly summary...
 
 Example transaction logging:
-User: "Spent 50 euros on food"
-Assistant: Let me log that transaction for you:
-- Amount: 50 EUR
-- Category: food
-- Type: expense
-- Date: {current_date.strftime('%Y-%m-%d')}
-*calls log_transaction with these details*
+User: "Spent 50 euros on food yesterday"
+Assistant actions:
+1. Call log_transaction with:
+   - amount: 50
+   - currency: 'EUR'
+   - category: 'food'
+   - type: 'expense'
+   - date: '{yesterday}'
+2. Show confirmation with both EUR and USD amounts
+3. Show monthly summary
 
 When users ask to export their transactions to CSV:
 1. Use the export_data_to_csv function immediately

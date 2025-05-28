@@ -48,8 +48,8 @@ A comprehensive web application that combines financial tools with AI assistance
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/financial-assistant.git
-   cd financial-assistant
+   git clone https://github.com/YonatanBest/Personalized-Financial-Assistant.git
+   cd Personalized-Financial-Assistant
    ```
 
 2. Create a virtual environment:

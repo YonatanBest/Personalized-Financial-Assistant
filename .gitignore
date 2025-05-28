@@ -4,7 +4,7 @@ venv/
 
 # Environment variables
 .env
-
+.flask_secret_key
 # Database
 database/*.db
 *.sqlite3
